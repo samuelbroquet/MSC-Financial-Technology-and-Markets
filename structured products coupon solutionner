@@ -1,0 +1,199 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import math
+import random
+
+#######################################################################################################################
+#input data
+S_0   = 894.25   # underlying spot price
+sigma = 0.1152     # volatility 
+r     = 0.01       # risk free rate 
+T     = 10         # maturity 
+K     = S_0        # strike 
+Barrier = 60/100   # barrière PDI
+Decrease = 5/100   # decrease rate
+df    = pd.DataFrame(index=np.arange(0,100000), columns=np.arange(0,10))
+payoffs = []
+
+#####################################################################################################################
+#generating asset prices
+random.seed(1)
+for y in range (0,100000):
+    S_t = S_0
+    S_t1 = 0
+    paths_generated = []
+    for x in range(0,10):
+        S_t1 = S_t * np.exp((r - 0.5 * sigma**2) * 1 + sigma * np.sqrt(1) * random.gauss(0,1.0))
+        paths_generated.append(S_t1)
+        S_t = S_t1
+
+    df.loc[y] = paths_generated
+    
+#print(df)
+
+########################################################################################################################
+#pricer ZCB classic
+def zcb_classic(S_0, K, r):
+    maturities_classic = 0
+    for i in range (0,100000):
+        maturity_classic = 0
+        for j in range (0,10):
+            if df.iloc[i,j] >= K and maturity_classic == 0:
+                maturity_classic = j+1
+                maturities_classic += maturity_classic  
+            if j==9 and maturity_classic == 0:
+                maturity_classic = j+1
+                maturities_classic += maturity_classic  
+    average_maturity_classic = (maturities_classic/100000)
+    return S_0 / ( 1 + r ) ** (average_maturity_classic)
+print('ZCB classic price: ', zcb_classic(S_0, K, r))
+
+#####################################################################################################################################
+def zcb_barrier(S_0, K, r):
+    maturities_barrier = 0
+    for i in range (0,100000):
+        maturity_barrier = 0
+        for j in range (0,9):
+            if df.iloc[i,j] >= K and maturity_barrier == 0:
+                maturity_barrier = j+1
+                maturities_barrier += maturity_barrier
+        for j in range (9,10):
+            if df.iloc[i,j] >= K*0.8 and maturity_barrier == 0:
+                maturity_barrier = j+1
+                maturities_barrier += maturity_barrier
+            if j==9 and maturity_barrier == 0:
+                maturity_barrier = j+1
+                maturities_barrier += maturity_barrier  
+    average_maturity_barrier = (maturities_barrier/100000)
+    return S_0 / ( 1 + r ) ** average_maturity_barrier         
+
+print('ZCB barrier price: ', zcb_barrier(S_0, K, r))
+
+########################################################################################################################
+#pricer ZCB decreasing
+def zcb_decreasing(S_0, K, r, Decrease):
+    maturities_decreasing = 0
+    for i in range (0,100000):
+        maturity_decreasing = 0
+        for j in range (0,2):
+            if df.iloc[i,j] >= K and maturity_decreasing == 0:
+                maturity_decreasing = j+1
+                maturities_decreasing += maturity_decreasing 
+        for j in range (2,4):
+            if df.iloc[i,j] >= K*(1-Decrease) and maturity_decreasing == 0:
+                maturity_decreasing = j+1
+                maturities_decreasing += maturity_decreasing  
+        for j in range (4,6):
+            if df.iloc[i,j] >= K*(1-2*Decrease) and maturity_decreasing == 0:
+                maturity_decreasing = j+1
+                maturities_decreasing += maturity_decreasing  
+        for j in range (6,8):
+            if df.iloc[i,j] >= K*(1-3*Decrease) and maturity_decreasing == 0:
+                maturity_decreasing = j+1
+                maturities_decreasing += maturity_decreasing  
+        for j in range (8,10):
+            if df.iloc[i,j] >= K*(1-4*Decrease) and maturity_decreasing == 0:
+                maturity_decreasing = j+1
+                maturities_decreasing += maturity_decreasing
+            if j==9 and maturity_decreasing == 0:
+                maturity_decreasing = j+1
+                maturities_decreasing += maturity_decreasing  
+    average_maturity_decreasing = (maturities_decreasing/100000)
+    return S_0 / ( 1 + r ) ** average_maturity_decreasing          
+
+print('ZCB decreasing price: ', zcb_decreasing(S_0, K, r, Decrease))
+
+########################################################################################################################
+#pricer PDI - 40%
+#https://blog.qarnot.com/introduction-to-computing-for-finance/
+random.seed(2)
+def generate_asset_price(S_0, sigma, r, T):
+    return S_0 * np.exp((r - 0.5 * sigma**2) * T + sigma * np.sqrt(T) * random.gauss(0,1.0))
+
+def pdi_payoff(S_T, Barrier, K):
+    if (K - S_T) < (K * (1 - Barrier)):
+        return 0.0
+    else:
+        return K - S_T
+
+for i in range(100000):
+    S_T = generate_asset_price(S_0, sigma, r, T)
+    payoffs.append(pdi_payoff(S_T, Barrier, K))
+
+price_pdi = np.exp(-r * T) * (sum(payoffs) / 100000)
+print ('PDI price:', price_pdi)
+
+###########################################################################################################################
+#budget for BBO
+budget_bbo_classic    = S_0-(zcb_classic(S_0, K, r)-price_pdi)              # prix sur les bbo: S_0-(ZCB-PDI)
+budget_bbo_barrier    = S_0-(zcb_barrier(S_0, K, r)-price_pdi)              # prix sur les bbo: S_0-(ZCB-PDI)
+budget_bbo_decreasing = S_0-(zcb_decreasing(S_0, K, r, Decrease)-price_pdi) # prix sur les bbo: S_0-(ZCB-PDI)
+print('budget for bbo classic: ', budget_bbo_classic)
+print('budget for bbo barrier: ', budget_bbo_barrier)
+print('budget for bbo decreasing: ', budget_bbo_decreasing)
+P_classic             = budget_bbo_classic/S_0                           # prix en pourcentage Price/S_0
+P_barrier             = budget_bbo_barrier/S_0                           # prix en pourcentage Price/S_0
+P_decreasing          = budget_bbo_decreasing/S_0                        # prix en pourcentage Price/S_0
+
+###############################################################################################################################
+#solution coupon option binaire bermudienne
+def bbo_coupon_classic(P_classic, K, T, r):
+    discounts_classic = 0
+    for i in range (0,100000):
+        discount_bbo_classic = 0
+        for j in range (0,10):
+            if df.iloc[i,j] >= K and discount_bbo_classic == 0:
+                discount_bbo_classic = np.exp(-r * (j+1))
+                discounts_classic += discount_bbo_classic
+    return P_classic/(discounts_classic/100000)           
+
+print('coupon BBO classic:', bbo_coupon_classic(P_classic, K, T, r))
+
+###########################################################################################################################
+#solution coupon option binaire bermudienne barrier at maturity
+def bbo_coupon_barrier(P_barrier, K, T, r):
+    discounts_barrier = 0
+    for i in range (0,100000):
+        discount_bbo_barrier = 0
+        for j in range (0,9):
+            if df.iloc[i,j] >= K and discount_bbo_barrier == 0:
+                discount_bbo_barrier = np.exp(-r * (j+1))
+                discounts_barrier += discount_bbo_barrier  
+        for j in range (9,10):
+            if df.iloc[i,j] >= K*(0.8) and discount_bbo_barrier == 0:
+                discount_bbo_barrier = np.exp(-r * (j+1))
+                discounts_barrier += discount_bbo_barrier  
+    return P_barrier/(discounts_barrier/100000)           
+
+print('coupon BBO barrier: ', bbo_coupon_barrier(P_barrier, K, T, r))
+
+###########################################################################################################################
+#solution coupon option binaire bermudienne decreasing
+def bbo_coupon_decreasing(P_decreasing, K, T, r, Decrease):
+    discounts_decreasing = 0
+    for i in range (0,100000):
+        discount_bbo_decreasing = 0
+        for j in range (0,2):
+            if df.iloc[i,j] >= K and discount_bbo_decreasing == 0:
+                discount_bbo_decreasing = np.exp(-r * (j+1))
+                discounts_decreasing += discount_bbo_decreasing 
+        for j in range (2,4):
+            if df.iloc[i,j] >= K*(1-Decrease) and discount_bbo_decreasing == 0:
+                discount_bbo_decreasing = np.exp(-r * (j+1))
+                discounts_decreasing += discount_bbo_decreasing  
+        for j in range (4,6):
+            if df.iloc[i,j] >= K*(1-2*Decrease) and discount_bbo_decreasing == 0:
+                discount_bbo_decreasing = np.exp(-r * (j+1))
+                discounts_decreasing += discount_bbo_decreasing  
+        for j in range (6,8):
+            if df.iloc[i,j] >= K*(1-3*Decrease) and discount_bbo_decreasing == 0:
+                discount_bbo_decreasing = np.exp(-r * (j+1))
+                discounts_decreasing += discount_bbo_decreasing  
+        for j in range (8,10):
+            if df.iloc[i,j] >= K*(1-4*Decrease) and discount_bbo_decreasing == 0:
+                discount_bbo_decreasing = np.exp(-r * (j+1))
+                discounts_decreasing += discount_bbo_decreasing   
+    return P_decreasing/(discounts_decreasing/100000)           
+
+print('coupon BBO decreasing: ', bbo_coupon_decreasing(P_decreasing, K, T, r, Decrease))
