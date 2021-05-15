@@ -1,0 +1,64 @@
+import numpy as np 
+from math import *
+import pandas as pd
+from my_functions import *
+import matplotlib.pyplot as plt
+
+equity_daily = pd.read_csv("WldEqtyRet2018.csv")
+equity_daily['date']=pd.to_datetime(equity_daily.date)
+equity_daily = equity_daily.set_index("date")
+equity_daily
+
+equity_desc = pd.read_csv('WldEqtyDesc2018.csv')
+equity_desc['monthly_return'] = len(equity_desc['Ticker']) * [0]
+equity_desc
+
+
+equity_desc = equity_desc[equity_desc["Ticker"].isin (equity_daily["ticker"])]
+equity_daily = equity_daily[equity_daily["ticker"].isin (equity_desc["Ticker"])]
+equity_daily = equity_daily.pivot(columns = "ticker", values = "tot_return").fillna(0) / 100
+equity_daily = equity_daily.loc["2015":]
+equity_daily
+
+
+monthly = np.zeros((48,len(equity_daily.columns)))
+count_month = 0
+for year in ["2015", "2016", "2017", "2018"]:
+    for month in ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"]:
+        monthly[count_month,:] = np.array(equity_daily.loc[year + "-" + "{}".format(month)].sum(axis = 0))
+        count_month += 1
+
+equity_monthly = pd.DataFrame(columns = equity_daily.columns)
+index = pd.date_range('2015-01', periods=48, freq='M')
+equity_monthly['index'] = index
+
+equity_monthly = equity_monthly.set_index(index)
+equity_monthly = equity_monthly.drop(columns = "index")
+count = 0
+for stock in equity_monthly.columns:
+    equity_monthly[stock] = monthly[:,count]
+    count += 1
+equity_monthly
+
+
+equity_desc['ymd_date_end']=pd.to_datetime(equity_desc.ymd_date_end)
+equity_desc = pd.DataFrame(equity_desc.pivot(index = 'ymd_date_end', columns = 'Ticker', values = ['ESG', 'Profitability', 'Growth', 'monthly_return']).fillna(0))
+equity_desc = equity_desc.loc["2015":]
+equity_desc.monthly_return = equity_monthly
+equity_desc
+
+weights = weight(equity_desc)
+weights
+
+dailyweights = monthly_to_daily(weights, equity_daily)  
+dailyweights
+
+equity_daily = equity_daily['2015-02-01':]
+portfolio_returns = equity_daily * dailyweights
+portfolio_returns['sumreturns']= portfolio_returns.sum(axis=1)
+portfolio_returns['value_port'] = 100 * np.cumprod(1 + portfolio_returns['sumreturns'])
+portfolio_returns['value_port'].plot()   #plot the value of the portfolio for an initial investment of 100 dollars
+plt.xlabel('Date')
+plt.ylabel('Portfolio Value')
+plt.title('Daily Portfolio value')
+plt.figure(figsize=(10, 6))
