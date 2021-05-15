@@ -1,0 +1,67 @@
+#Bloomberg Query Language (BQL)
+# import bql
+# import bqviz as bvq
+
+# import open sources libraries
+import pandas as pd
+#import mathplotlib.pyplot as plt
+from datetime import date
+from datetime import datetime
+import numpy as np
+from scipy.stats import linregress
+import matplotlib.pyplot as plt
+
+table = pd.read_excel('HFRI.xls')
+table = table.set_index(table['DATE'])
+del table['DATE']
+x = np.array(table['HFRIFWI Index'])
+hf_returns = [0]
+cum_sum_hf_returns = [0]
+for i in range (1,240):
+    hf_returns.append(np.log(x[i]/x[i-1]))
+    cum_sum_hf_returns.append(hf_returns[i]+cum_sum_hf_returns[i-1])
+table['HFRIFWI returns'] = pd.DataFrame(hf_returns)
+table['HFRIFWI cumreturns'] = pd.DataFrame(cum_sum_hf_returns)
+table
+
+
+plt.plot(dates, cum_sum_hf_returns)
+plt.title('cumulative sum of returns')
+plt.xlabel('Dates')
+plt.ylabel('Log Return')
+plt.grid(True)
+plt.legend()
+
+
+drawdowns = []
+returns_max = []
+for i in range (0,240):
+    returns_max.append(cum_sum_hf_returns[i])
+    drawdowns.append(max(returns_max))
+    
+plt.plot(dates, drawdowns)
+plt.title('Fund Manager Profit')
+plt.xlabel('Dates')
+plt.ylabel('Max value of HF')
+plt.grid(True)
+plt.legend()
+
+
+#1 creating momentum strategy
+index = pd.read_excel('HFRI.xls')
+index = index.set_index('DATE')
+index
+
+
+
+#2 building a beta neutral strategy
+CAC40 = pd.read_excel('PX.xls')
+CAC40 = CAC40.set_index('DATE')
+CAC40_beta = CAC40.copy(deep='false')
+moyenne= np.array(CAC40.apply(np.mean, axis = 1))
+CAC40_beta_a = np.cov(CAC40.T, moyenne)/np.var(moyenne)
+df = pd.DataFrame(CAC40_beta_a)
+df
+
+
+
