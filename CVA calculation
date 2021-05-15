@@ -1,0 +1,94 @@
+from math import *
+import numpy as np
+from QuantLib import *
+import pandas as pd
+from csv import *
+
+
+swap_curve_march_2nd = r'swap_curve_march_2nd.csv'
+swap_curve_may_24th = r'swap_curve_may_24th.csv'
+swap_curve_april_20th = r'swap_curve_april_20th.csv'
+german_march_2nd = r'rf_german_bund_curve_march_2nd.csv'
+german_may_24th = r'rf_german_bund_curve_may_24th.csv'
+german_april_20th = r'rf_german_bund_curve_april_20th.csv'
+
+
+swap_curve_march_2nd = pd.read_csv(swap_curve_march_2nd,
+                   index_col=0,
+                   parse_dates=True)
+
+german_march_2nd = pd.read_csv(german_march_2nd,
+                   index_col=0,
+                   parse_dates=True)
+
+swap_curve_may_24th = pd.read_csv(swap_curve_may_24th,
+                   index_col=0,
+                   parse_dates=True)
+
+german_may_24th = pd.read_csv(german_may_24th,
+                   index_col=0,
+                   parse_dates=True)
+swap_curve_april_20th = pd.read_csv(swap_curve_april_20th,
+                   index_col=0,
+                   parse_dates=True)
+
+german_april_20th = pd.read_csv(german_april_20th,
+                   index_col=0,
+                   parse_dates=True)
+                   
+                   
+                   swap_curve_march_2nd = pd.DataFrame(swap_curve_march_2nd)
+zero_cc_march_2nd = pd.DataFrame(zero_cc_march_2nd)
+german_march_2nd = pd.DataFrame(german_march_2nd)
+zero_cc_may_24th = pd.DataFrame(zero_cc_may_24th)
+swap_curve_may_24th = pd.DataFrame(swap_curve_may_24th)
+german_may_24th = pd.DataFrame(german_may_24th)
+
+
+
+array_swap_curve_march_2nd = np.array(swap_curve_march_2nd['rate'])
+array_swap_curve_may_24th = np.array(swap_curve_may_24th['rate'])
+array_swap_curve_april_20th = np.array(swap_curve_april_20th['rate'])
+array_german_march_2nd = np.array(german_march_2nd['Rate'])
+array_german_may_24th = np.array(german_may_24th['Rate'])
+array_german_april_20th = np.array(german_april_20th['Rate'])
+
+
+
+array_swap_curve_march_2nd = array_swap_curve_march_2nd.astype(np.float)
+array_swap_curve_may_24th = array_swap_curve_may_24th.astype(np.float)
+array_swap_curve_april_20th = array_swap_curve_april_20th.astype(np.float)
+array_german_march_2nd = array_german_march_2nd.astype(np.float)
+array_german_may_24th = array_german_may_24th.astype(np.float)
+array_german_april_20th = array_german_april_20th.astype(np.float)
+array_german_april_20th
+
+
+
+def fixed_leg (coupon, nb_coupons, prem_coup, period, r, nominal):   #period = nb coupons / an ; nb_coupons = nombres de coupons encore à recevoir ; Coupon = % / AN : r = vecteur rate ; prem_coup = dans combien de temps(en annee) on reçoit le premier coupon 
+    result = 0
+    for i in range(nb_coupons - 1):
+        result += ((coupon / period) * nominal) / ((1+r[i])**((i/period) + prem_coup))
+        #print (result)
+    result += ((coupon / period) * nominal + nominal) / ((1+r[nb_coupons - 1])**(((nb_coupons - 1)/period) + prem_coup))
+    return result
+def floating_leg (nb_coupons, prem_coup, period, r, swap_rate, nominal):   #per = nb coupons / an ; nb_coupons = nombres de coupons encore à recevoir ; r = vecteur r ; prem_coup = temps en annee premier coupon 
+    result = 0
+    for i in range(nb_coupons - 1):
+        result += ((swap_rate[i] / period) * nominal) / ((1+r[i])**((i/period) + prem_coup))  
+    result += ((swap_rate[nb_coupons - 1] / period) * nominal + nominal) / ((1+r[nb_coupons - 1])**(((nb_coupons - 1)/period) + prem_coup))  
+    return result  
+
+def value_swap1 (floating, fixed):
+    return floating - fixed
+def value_swap2 (floating, fixed):
+    return floating - fixed
+def value_swap3 (floating, fixed):
+    return fixed- floating
+    
+    
+    value_swap1(floating_leg(14,22/360,2,array_german_march_2nd,array_swap_curve_march_2nd,10000000),fixed_leg(0.0225,14,22/360,2,array_german_march_2nd,10000000))
+    
+    value_swap2(floating_leg(7,104/360,2,array_german_may_24th,array_swap_curve_may_24th,10000000),fixed_leg(0.00,7,104/360,2,array_german_may_24th,10000000))
+    
+    value_swap3(floating_leg(5,70/360,2,array_german_april_20th,array_swap_curve_april_20th,20000000),fixed_leg(0.0035,5,70/360,2,array_german_april_20th,20000000))
