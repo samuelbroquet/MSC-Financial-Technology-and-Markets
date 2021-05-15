@@ -1,0 +1,441 @@
+import numpy as np
+from math import *
+from matplotlib import *
+import numpy.random as npr
+import scipy.stats as si
+import matplotlib.pyplot as plt
+
+def simulate(M, I):
+    #M: number of time intervals for discretization
+    #I: number of paths to be simulated
+    
+    simulated = npr.standard_normal((M + 1, int(I / 2)))
+    simulated = np.concatenate((simulated, -simulated), axis=1)
+    simulated = (simulated - simulated.mean()) / simulated.std()
+    return simulated
+
+
+#######################################################################################################################################
+#Pricing for the simple call 
+
+def euro_call(K, S0, sigma, r, T):
+    #K: strike price of the option
+    #option: 'call' or 'put'
+    
+    npr.seed(7)
+    dt = T / M  #M is the number of points per year : 50
+    S = np.zeros((M + 1, I))    
+    liste_prices = []
+    
+    for i in range(1000): #1000 Monte-Carlo to have a confidence interval
+        sim = simulate(M, I)
+        S[0] = S0
+        for t in range(1, M + 1):     #we fill in the line for each time value of the price of the function
+            S[t] = S[t - 1] * np.exp((r - 0.5 * sigma ** 2) * dt + sigma * np.sqrt(dt) * sim[t])
+            
+        hT = np.maximum(S[-1] - K, 0)
+        liste_prices += [np.exp(-r * T) * np.mean(hT)]
+    
+    limite_basse = np.percentile(liste_prices, 2.5)
+    limite_haute = np.percentile(liste_prices, 97.5)
+    price = np.mean(liste_prices)
+    return limite_basse, price, limite_haute
+
+
+S0 = 100
+sigma_call = 0.216  #volatility M = 3y ; K = 150
+r = 0.0645 # zero coupon continuous rate for maturity = 3years
+T = 3.0  #3years maturity
+I = 500  #number of scenariis
+M = 150   #50 points per year
+K = 150  #strike 
+
+limite_basse, price, limite_haute = euro_call(K, S0, sigma_call, r, T)
+
+print ("the price of the euro call with K = 150 is in the interval : [{}".format(limite_basse) + ', {}'.format(limite_haute) + '] et le prix est {}'.format(price))
+
+
+#######################################################################################################################################
+#Pricing for the american digital call 
+
+def american_digital_call (barrier, S0, sigma, r, T):
+    #K: strike price of the option
+    #option: 'call' or 'put'
+    npr.seed(7)
+    dt = T / M   #M is the number of points per year : 50
+    S = np.zeros((M + 1, I))
+    payoffs = 0 
+    liste_prices = []
+    
+    for i in range(100):    #100 Monte Carlo simulations to have the confidence interval
+        sim = simulate(M, I)
+        S[0] = S0
+        payoffs = 0
+        for t in range(1, M + 1):     #we fill in the line for each time value of the price of the function
+            S[t] = S[t - 1] * np.exp((r - 0.5 * sigma ** 2) * dt + sigma * np.sqrt(dt) * sim[t])
+            for col in range(S.shape[1]) : 
+                if S[t,col] >= barrier : 
+                    S[t,col] = 0
+                    payoffs += 1 * np.exp(-r * (t/50))  #we discount 
+
+        liste_prices += [payoffs / I]
+    limite_basse_digit = np.percentile (liste_prices, 2.5)
+    limite_haute_digit = np.percentile (liste_prices, 97.5)
+    price_digit = np.mean(liste_prices)
+        
+    return limite_basse_digit, price_digit, limite_haute_digit
+
+
+
+
+#######################################################################################################################################
+# digital with barrier = 120
+
+S0 = 100
+sigma_digital = 0.237 #for barrier = 120
+T = 3.0
+I = 500
+M = 150
+barrier = 120
+
+
+
+limite_basse_digit, price_digit, limite_haute_digit = american_digital_call (barrier, S0, sigma_digital, r, T)
+
+print ("the price of the american digital call barrier = 120 is in [{}".format(limite_basse_digit) + ', {}'.format(limite_haute_digit) + "] et le prix est : {}".format(price_digit))
+
+
+#######################################################################################################################################
+# digital with barrier = 150
+barrier = 150
+sigma_digital = 0.216   #for barrier = 150
+
+limite_basse_digit, price_digit, limite_haute_digit = american_digital_call (barrier, S0, sigma_digital, r, T)
+
+print ("the price of the american digital call barrier = 150 is in [{}".format(limite_basse_digit) + ', {}'.format(limite_haute_digit) + "] et le prix est : {}".format(price_digit))
+
+#######################################################################################################################################
+#Pricing for the american KO call 
+
+def american_barrier_KO_call(strike, barrier, S0, sigma, r, T):
+    #K: strike price of the option
+    #option: 'call' or 'put'
+    
+    npr.seed(7)
+    dt = T / M
+    S = np.zeros((M + 1, I))
+    liste_prices = []
+    
+    for i in range(1000):
+        sim = simulate(M, I)
+        S[0] = S0
+        for t in range(1, M + 1):     #we fill in the line for each time value of the price of the function
+            S[t] = S[t - 1] * np.exp((r - 0.5 * sigma ** 2) * dt + sigma * np.sqrt(dt) * sim[t])
+            for col in range(S.shape[1]):
+                if S[t,col] >= barrier:
+                    S[t,col] = 0
+
+        hT = np.maximum(S[-1] - strike, 0)
+        liste_prices += [np.exp(-r * T) * np.mean(hT)]
+    
+    limite_basse = np.percentile(liste_prices, 2.5)
+    price = np.mean(liste_prices)
+    limite_haute = np.percentile(liste_prices, 97.5)
+    
+    return limite_basse, price, limite_haute
+
+
+
+#######################################################################################################################################
+sigma_KO = 0.261  #for strike = 100
+strike = 100
+barrier = 120
+
+
+limite_basse_KO , price_KO, limite_haute_KO = american_barrier_KO_call(strike, barrier, S0, sigma_KO, r, T)
+
+
+print('"the price of the american barrier KO call K = 100 barrier = 120 is in : [{}'.format(limite_basse_KO) + ', {}'.format(limite_haute_KO) + '] et le prix est {}'.format(price_KO))
+
+
+#######################################################################################################################################
+sigma_KO = 0.237  #for strike = 120
+strike = 120
+barrier = 150
+
+limite_basse_KO , price_KO, limite_haute_KO = american_barrier_KO_call(strike, barrier, S0, sigma_KO, r, T)
+
+
+print('"the price of the american barrier KO call K = 120 barrier = 150 is in : [{}'.format(limite_basse_KO) + ', {}'.format(limite_haute_KO) + '] et le prix est {}'.format(price_KO))
+
+#######################################################################################################################################
+costs = 0.5 * euro_call(150, S0, 0.216, r, T)[1] + 10 * american_digital_call (120, S0, 0.237, r, T)[1] + 15 * american_digital_call (150, S0, 0.216, r, T)[1] + 0.5 * american_barrier_KO_call(100, 120, S0, 0.261, r, T)[1] + 0.5 * american_barrier_KO_call(120, 150, S0, 0.237, r, T)[1]
+
+print ("the cost of the derivatives (without the ZCB) is : {}".format(costs))
+
+#######################################################################################################################################
+cost_ZCB = 100 * np.exp(-0.0645 * 3)
+print ("the cost of the ZCB is : {}".format(cost_ZCB))
+print ("the total cost is : {}".format(costs + cost_ZCB))
+
+#######################################################################################################################################
+print ("the margin is : {}".format(100 - (costs + cost_ZCB)))
+#JUST A LITTLE CELL TO SHOW different CAC40 paths
+
+import matplotlib.pyplot as plt
+
+dt = T / M  #M is the number of points per year : 50
+S = np.zeros((M + 1, I))
+S[0] = S0
+sim = simulate(M, I)
+for t in range(1, M + 1):     #we fill in the line for each time value of the price of the function
+    S[t] = S[t - 1] * np.exp((r - 0.5 * sigma_call ** 2) * dt + sigma_call * np.sqrt(dt) * sim[t])
+        
+
+x = np.arange(151)
+x = x / 50
+x        
+        
+plt.plot(x, S[:,:10])
+plt.title("CAC 40 paths")
+plt.xlabel('time (year)')
+plt.ylabel('value (percentage)')
+
+
+
+# a) shift of -0.5% for the rate ? 
+T = 3
+M = 150
+r = 0.0598 #ZCB continuous maturity = 3Y
+
+costs = 0.5 * euro_call(150, S0, 0.216, r, T)[1] + 10 * american_digital_call (120, S0, 0.237, r, T)[1] + 15 * american_digital_call (150, S0, 0.216, r, T)[1] + 0.5 * american_barrier_KO_call(100, 120, S0, 0.261, r, T)[1] + 0.5 * american_barrier_KO_call(120, 150, S0, 0.237, r, T)[1]
+
+cost_ZCB = 100 * np.exp(-r * 3)
+
+print ("the new margin with the rate shift is : {}".format(100 - (costs + cost_ZCB)))
+
+
+
+#c) Impact of 1Y maturity
+
+r = 0.0665 #rate for maturity = 4years now
+T = 4
+M = 200
+
+costs = 0.5 * euro_call(150, S0, 0.216, r, T)[1] + 10 * american_digital_call (120, S0, 0.237, r, T)[1] + 15 * american_digital_call (150, S0, 0.216, r, T)[1] + 0.5 * american_barrier_KO_call(100, 120, S0, 0.261, r, T)[1] + 0.5 * american_barrier_KO_call(120, 150, S0, 0.237, r, T)[1]
+
+cost_ZCB = 100 * np.exp(-r * 4)
+
+print ("the new margin with 1year more is : {}".format(100 - (costs + cost_ZCB)))
+
+
+
+# d) 1% increase in coupons
+# call digit strike 120: 10 -> 11
+# call KO strike 100: 0.5 -> 0.55
+T = 3
+M = 150
+r = 0.0645 #ZCB continuous maturity = 3Y
+costs = 0.5 * euro_call(150, S0, 0.216, r, T)[1] + 11 * american_digital_call (120, S0, 0.237, r, T)[1] + 15 * american_digital_call (150, S0, 0.216, r, T)[1] + 0.55 * american_barrier_KO_call(100, 120, S0, 0.261, r, T)[1] + 0.5 * american_barrier_KO_call(120, 150, S0, 0.237, r, T)[1]
+
+print ("the cost of the derivatives (without the ZCB) is : {}".format(costs))
+
+#######################################################################################################################################
+cost_ZCB = 100 * np.exp(-0.0645 * 3)
+print ("the total cost is : {}".format(costs + cost_ZCB))
+
+#######################################################################################################################################
+print ("the margin with 1% more coupon yield is : {}".format(100 - (costs + cost_ZCB)))
+
+
+
+# e) 1% increase on the volatility surface
+
+r = 0.0645
+T = 3
+M = 150
+
+costs = 0.5 * euro_call(150, S0, 0.226, r, T)[1] + 10 * american_digital_call (120, S0, 0.247, r, T)[1] + 15 * american_digital_call (150, S0, 0.226, r, T)[1] + 0.5 * american_barrier_KO_call(100, 120, S0, 0.271, r, T)[1] + 0.5 * american_barrier_KO_call(120, 150, S0, 0.247, r, T)[1]
+
+
+print ("the cost of the derivatives (without the ZCB) is : {}".format(costs))
+
+cost_ZCB = 100 * np.exp(-0.0645 * 3)
+print ("the total cost is : {}".format(costs + cost_ZCB))
+
+print ("the margin with an increase of 1% in the volatility surface is : {}".format(100 - (costs + cost_ZCB)))
+
+
+
+# f) black and scholes to price the vanilla call strike 150%
+sigma = 0.2156
+S0 = 3600
+T = 3
+K = 5400
+r = 0.0645
+I = 500
+M = 150   #50 points per year
+
+d1 = (1/(sigma * np.sqrt(T))) * ((np.log(S0 / K) + (r + 0.5 * sigma ** 2) * T))
+d2 = d1 - sigma * np.sqrt(T)
+
+Nd1 = si.norm.cdf(d1, 0.0, 1.0)
+Nd2 = si.norm.cdf(d2, 0.0, 1.0)
+
+call_vanilla_150_BS = S0 * Nd1 - K * np.exp(-r * T) * Nd2
+call_vanilla_150_BS_pourcent = call_vanilla_150_BS / S0 * 100
+
+#####################################################################################################################################
+# prix du call avec montecarlo avec un nombre de smiluation croissant
+def euro_call_mc(K, S0, sigma, r, T):
+    #K: strike price of the option
+    #option: 'call' or 'put'
+    npr.seed(7)
+    dt = T / M  #M is the number of points per year : 50
+    S = np.zeros((M + 1, I))    
+    liste_prices = []
+    valeur_call_mc = []
+    var_call_mc = []
+    vol_call_mc = []
+    
+    for i in range(0,100): #100 Monte-Carlo
+        sim = simulate(M, I)
+        S[0] = S0
+        for t in range(1, M + 1):     #we fill in the line for each time value of the price of the function
+            S[t] = S[t - 1] * np.exp((r - 0.5 * sigma ** 2) * dt + sigma * np.sqrt(dt) * sim[t])   
+        hT = np.maximum(S[-1] - K, 0)
+        liste_prices += [np.exp(-r * T) * np.mean(hT) / S0 * 100] 
+        valeur_call_mc.append(np.mean(liste_prices))
+    price = np.mean(liste_prices)
+    plt.plot(valeur_call_mc - price, label = 'errors')
+    
+    
+    plt.grid(True)
+    var_call_mc.append((valeur_call_mc[0]-price) ** 2)
+    vol_call_mc.append(np.sqrt(var_call_mc[0]))
+    for x in range(1,100):
+        var_call_mc.append(0)
+        vol_call_mc.append(0)
+        var_call_mc[x] = (valeur_call_mc[x]-price) ** 2 + valeur_call_mc[x-1]
+        var_call_mc[x] = var_call_mc[x] / x+1
+        vol_call_mc[x] = np.sqrt(var_call_mc[x])
+    plt.plot(vol_call_mc, label = 'errors volatility')
+    
+    return price
+
+print('prix du call avec Black and Scholes = ', call_vanilla_150_BS_pourcent)
+print ("prix du call avec le Monte-Carlo : {}".format(euro_call_mc(K, S0, sigma, r, T)))
+
+plt.title('errors and errors volatility')
+plt.xlabel("number of simulations")
+
+
+plt.legend()
+
+
+
+
+
+# 6) MARCHE SECONDAIRE
+
+# a) Forward price of the CAC 
+S0 = 3600
+r = 0.0566  #ZCP continuous rate for 1Y
+
+Forward = S0 * np.exp(r * 1)
+print("The value of the CAC forward in one year is {}".format(Forward))
+
+
+
+# b) Forward rate F(1,3) (2y maturity in 1 year)
+
+r_03 = 0.0645   #we use continuous rate ! 
+r_01 = 0.0566
+
+F_13 = (3 * r_03 - r_01) / 2 
+print("The value of the forward rate in one year for a 2Y Maturity is {}".format(F_13))
+
+
+
+# a) value of the guaranteed capital
+
+value = 100 * np.exp(-F_13 * 2)
+print("The value of the guaranteed capital is {}".format(value))
+
+
+
+#b) the value of the options
+T = 2
+I = 500  #number of scenariis
+M = 100
+sigma_call = 0.2019
+K = 150
+S0 = (Forward / 3600) * 100 #we use a value in percentage
+
+print ("the price of the euro call with K = 150 is now : {}".format(euro_call(K, S0, sigma_call, F_13, T)[1]))
+
+
+
+# digital with barrier = 120
+
+sigma_digital_120 = 0.2271 #for barrier = 120
+barrier = 120
+
+print ("the price of the american digital call barrier = 120 is now : {}".format(american_digital_call (barrier, S0, sigma_digital_120, F_13, T)[1]))
+
+
+
+# digital with barrier = 150
+barrier = 150
+sigma_digital_150 = 0.2019   #for barrier = 150
+print ("the price of the american digital call barrier = 150 is now: {}".format(american_digital_call (barrier, S0, sigma_digital_150, F_13, T)[1]))
+
+
+
+sigma_KO_100 = 0.2567  #for strike = 100
+strike = 100
+barrier = 120
+
+print ("the price of the american barrier KO call K = 100 barrier = 120 is now : {}".format(american_barrier_KO_call(strike, barrier, S0, sigma_KO_100, F_13, T)[1]))
+
+
+
+sigma_KO_120 = 0.2271  #for strike = 120
+strike = 120
+barrier = 150
+
+print ("the price of the american barrier KO call K = 120 barrier = 150 is now : {}".format(american_barrier_KO_call(strike, barrier, S0, sigma_KO_120, F_13, T)[1]))
+
+
+# c) Cost of the product
+
+costs = 0.5 * euro_call(150, S0, sigma_call, F_13, T)[1] + 10 * american_digital_call (120, S0, sigma_digital_120, F_13, T)[1] + 15 * american_digital_call (150, S0, sigma_digital_150, F_13, T)[1] + 0.5 * american_barrier_KO_call(100, 120, S0, sigma_KO_100, F_13, T)[1] + 0.5 * american_barrier_KO_call(120, 150, S0, sigma_KO_120, F_13, T)[1] + value
+
+print ("the price of the structured product is now : {}".format(costs))
+
+
+
+# d) A partir de la fourchette bid/ask : 4bp sur la courbe de taux et 2% sur la vol:
+# Bid taux= fair price - 2BP   Ask taux = faire price +2bp
+# Bid vol= fair price - 1%   Ask vol = faire price +1%
+bid_taux= F_13-0.0002
+
+value_bid = 100 * np.exp (-bid_taux * 2)
+print("The value of the guaranteed capital is {}".format(value_bid))
+
+bid_sigma_call=sigma_call-0.01
+bid_sigma_digital_120=sigma_digital_120-0.01
+bid_sigma_digital_150=sigma_digital_150-0.01
+bid_sigma_KO_100=sigma_KO_100-0.01
+bid_sigma_KO_120=sigma_KO_120-0.01
+
+costs_bid = 0.5 * euro_call(150, S0, bid_sigma_call, F_13, T)[1] + 10 * american_digital_call (120, S0, bid_sigma_digital_120, F_13, T)[1] + 15 * american_digital_call (150, S0, bid_sigma_digital_150, F_13, T)[1] + 0.5 * american_barrier_KO_call(100, 120, S0, bid_sigma_KO_100, F_13, T)[1] + 0.5 * american_barrier_KO_call(120, 150, S0, bid_sigma_KO_120, F_13, T)[1] + value_bid
+
+print ("the price of the structured product is now : {}".format(costs_bid))
+
+
+
+
+
+#e) En cas de revente du produit à ce moment, le TRAAB (taux de rendement actuariel brut) du produit serait de: 0.933/(1+0.0566)=0.88%
+# Il serait largement préférable de laisser le produit en vie car le rendement qu'il pourrait offrir est nettement supérieur à 0.88%.
