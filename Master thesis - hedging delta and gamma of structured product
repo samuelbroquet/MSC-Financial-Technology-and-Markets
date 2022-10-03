@@ -1,0 +1,1030 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import math
+import random
+from scipy.stats import norm
+
+#input data
+St   = 43 #initial price
+q     = math.log(1+2.6/43)
+r     = -0.00478   # risk free rate = EURIBOR 12m as of 04/11/2021 
+epsilon = 0.10
+Coupon = 5
+h = Coupon/epsilon
+pdi = 30
+h_pdi = pdi/epsilon
+T     = 1/252          # maturity 
+df    = pd.DataFrame(index=np.arange(0,10000), columns=np.arange(0,252))
+ 
+random.seed(2)
+for y in range (0,10000):
+    St = 43
+    St1 = 0
+    paths_generated = []
+    for x in range(0,252):
+        if St >= 51.6: 
+            sigma = 0.212
+        if 51.6 > St >= 49.45: 
+            sigma = 0.215
+        if 49.45 > St >= 47.3: 
+            sigma = 0.218
+        if 47.3 > St >= 45.15: 
+            sigma = 0.223
+        if 45.15 > St >= 44.07: 
+            sigma = 0.225
+        if 44.07 > St >= 43: 
+            sigma = 0.221
+        if 43 > St >= 41.92: 
+            sigma = 0.209
+        if 41.92 > St >= 40.85: 
+            sigma = 0.207
+        if 40.85 > St >= 38.7: 
+            sigma = 0.214
+        if 38.7 > St >= 34.4: 
+            sigma = 0.224 
+        else: 
+            sigma = 0.236
+        St1 = St * np.exp((r - q) * T + sigma * np.sqrt(T) * random.gauss(0,1.0) + 0.5 * sigma**2 * (random.gauss(0,1)**2 - 1) * T)
+        paths_generated.append(St1)
+        St = St1
+
+    df.loc[y] = paths_generated
+
+df2 = pd.DataFrame(index=["Median", "75%", "25%", "5%"], columns=np.arange(0,252))
+for x in range (0,252):
+    df2.iloc[0,x] = df.iloc[:,x].quantile(0.5).round(2)
+    df2.iloc[1,x] = df.iloc[:,x].quantile(0.75).round(2)
+    df2.iloc[2,x] = df.iloc[:,x].quantile(0.25).round(2)
+    df2.iloc[3,x] = df.iloc[:,x].quantile(0.05).round(2)
+print(df2)
+
+###########################################################################################################################################################################
+
+last_column = df.iloc[:,-1]
+
+fig, ax = plt.subplots(figsize = (9, 9))
+ax.hist(last_column, bins=100, edgecolor="black")
+
+############################################################################################################################################################################
+
+#input data
+St   = 43 #initial price
+q     = math.log(1+2.6/43)
+r     = -0.00478   # risk free rate = EURIBOR 12m as of 04/11/2021 
+epsilon = 0.10
+Coupon = 5
+h = Coupon/epsilon
+pdi = 30
+h_pdi = pdi/epsilon
+T     = 1/252          # maturity 
+df    = pd.DataFrame(index=np.arange(0,10000), columns=np.arange(0,252))
+ 
+random.seed(2)
+for y in range (0,10000):
+    St = 43
+    St1 = 0
+    paths_generated = []
+    for x in range(0,252):
+        if St >= 51.6: 
+            sigma = 0.212
+        if 51.6 > St >= 49.45: 
+            sigma = 0.215
+        if 49.45 > St >= 47.3: 
+            sigma = 0.218
+        if 47.3 > St >= 45.15: 
+            sigma = 0.223
+        if 45.15 > St >= 44.07: 
+            sigma = 0.225
+        if 44.07 > St >= 43: 
+            sigma = 0.221
+        if 43 > St >= 41.92: 
+            sigma = 0.209
+        if 41.92 > St >= 40.85: 
+            sigma = 0.207
+        if 40.85 > St >= 38.7: 
+            sigma = 0.214
+        if 38.7 > St >= 34.4: 
+            sigma = 0.224 
+        else: 
+            sigma = 0.236
+        St1 = St * np.exp((r - q) * T + sigma * np.sqrt(T) * random.gauss(0,1.0))
+        paths_generated.append(St1)
+        St = St1
+
+    df.loc[y] = paths_generated
+
+df2 = pd.DataFrame(index=["Median", "75%", "25%", "5%"], columns=np.arange(0,252))
+for x in range (0,252):
+    df2.iloc[0,x] = df.iloc[:,x].quantile(0.5).round(2)
+    df2.iloc[1,x] = df.iloc[:,x].quantile(0.75).round(2)
+    df2.iloc[2,x] = df.iloc[:,x].quantile(0.25).round(2)
+    df2.iloc[3,x] = df.iloc[:,x].quantile(0.05).round(2)
+print(df2)
+
+################################################################################################################################################################
+
+last_column = df.iloc[:,-1]
+
+fig, ax = plt.subplots(figsize = (9, 9))
+ax.hist(last_column, bins=100, edgecolor="black")
+
+###################################################################################################################################################################
+
+K_call = 43
+K_put = 30.1
+sigma = 0.221
+St   = 43
+K_hedge_33 = 33
+K_hedge_43 = 43
+T = 1
+#########################################################################################################################################################
+def price_call(St, K_call, r, T, sigma):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_call)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    return (St * norm.cdf(d1)) - (K_call * np.exp(-r * T) * norm.cdf(d2))
+    
+def price_put(St, K_put, r, T, sigma):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_put)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    return (-St * norm.cdf(-d1)) + (K_put * np.exp(-r * T) * norm.cdf(-d2))
+    
+def price_call_spread(St, K_call, r, T, sigma, epsilon):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_call)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    d1_epsilon= (1/(sigma * np.sqrt(T))) * (math.log(St/(K_call-epsilon))+(r + 0.5 * sigma**2) * T)
+    d2_epsilon= d1_epsilon - (sigma * np.sqrt(T))
+    return ((St * norm.cdf(d1_epsilon)) - ((K_call-epsilon) * np.exp(-r * T) * norm.cdf(d2_epsilon))) - ((St * norm.cdf(d1)) - (K_call * np.exp(-r * T) * norm.cdf(d2)))
+    
+def price_put_spread(St, K_put, r, T, sigma, epsilon):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_put)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    d1_epsilon= (1/(sigma * np.sqrt(T))) * (math.log(St/(K_put-epsilon))+(r + 0.5 * sigma**2) * T)
+    d2_epsilon= d1_epsilon - (sigma * np.sqrt(T))
+    return ((-St * norm.cdf(-d1)) + (K_put * np.exp(-r * T) * norm.cdf(-d2))) - ((-St * norm.cdf(-d1_epsilon)) + ((K_put-epsilon) * np.exp(-r * T) * norm.cdf(-d2_epsilon)))
+
+def delta_call(St, K_call, sigma, r, T):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_call)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    return norm.cdf(d1)
+
+def delta_put(St, K_put, sigma, r, T):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_put)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    return norm.cdf(d1) - 1
+
+def gamma_call(St, K_call, sigma, r, T):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_call)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    return norm.pdf(d1)/(St * sigma * np.sqrt(T))
+
+def gamma_put(St, K_put, sigma, r, T):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_put)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    return norm.pdf(d1)/(St * sigma * np.sqrt(T))
+
+def delta_call_spread(St, K_call, sigma, r, T, epsilon):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_call)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    d1_epsilon= (1/(sigma * np.sqrt(T))) * (math.log(St/(K_call-epsilon))+(r + 0.5 * sigma**2) * T)
+    d2_epsilon= d1_epsilon - (sigma * np.sqrt(T))
+    return norm.cdf(d1_epsilon) - (norm.cdf(d1))
+
+def delta_put_spread(St, K_put, sigma, r, T, epsilon):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_put)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    d1_epsilon= (1/(sigma * np.sqrt(T))) * (math.log(St/(K_put-epsilon))+(r + 0.5 * sigma**2) * T)
+    d2_epsilon= d1_epsilon - (sigma * np.sqrt(T))
+    return ((norm.cdf(d1) - 1) - (norm.cdf(d1_epsilon) - 1))
+
+def gamma_call_spread(St, K_call, sigma, r, T, epsilon):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_call)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    d1_epsilon= (1/(sigma * np.sqrt(T))) * (math.log(St/(K_call-epsilon))+(r + 0.5 * sigma**2) * T)
+    d2_epsilon= d1_epsilon - (sigma * np.sqrt(T))
+    return (norm.pdf(d1_epsilon)/(St * sigma * np.sqrt(T))) - (norm.pdf(d1)/(St * sigma * np.sqrt(T)))
+
+def gamma_put_spread(St, K_put, sigma, r, T, epsilon):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_put)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    d1_epsilon= (1/(sigma * np.sqrt(T))) * (math.log(St/(K_put-epsilon))+(r + 0.5 * sigma**2) * T)
+    d2_epsilon= d1_epsilon - (sigma * np.sqrt(T))
+    return (norm.pdf(d1)/(St * sigma * np.sqrt(T))) - (norm.pdf(d1_epsilon)/(St * sigma * np.sqrt(T)))
+
+
+print("price_call_spread: ", price_call_spread(St, K_call, r, T, sigma, epsilon)*-1*h)
+print("price_put_spread: ", price_put_spread(St, K_put, r, T, sigma, epsilon)*h_pdi)
+print("price_put: ", price_put(St, K_put, r, T, sigma))
+
+print("delta_call_spread: ",  delta_call_spread(St, K_call, sigma, r, T, epsilon)*h*-1)
+print("gamma_call_spread: ", gamma_call_spread(St, K_call, sigma, r, T, epsilon)*h*-1)
+
+print("delta_put_spread: ", delta_put_spread(St, K_put, sigma, r, T, epsilon)*h_pdi)
+print("gamma_put_spread: ", gamma_put_spread(St, K_put, sigma, r, T, epsilon)*h_pdi)
+
+print("delta_put: ", delta_put(St, K_put, sigma, r, T))
+print("gamma_put: ", gamma_put(St, K_put, sigma, r, T))
+
+
+
+
+def price_call_hedge_33(St, K_hedge_33, r, T, sigma):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_hedge_33)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    return ((St * norm.cdf(d1)) - (K_hedge_33 * np.exp(-r * T) * norm.cdf(d2))).round(4)
+
+def delta_call_hedge_33(St, K_hedge_33, r, T, sigma):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_hedge_33)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    return (norm.cdf(d1)).round(4)
+    
+def gamma_call_hedge_33(St, K_hedge_33, r, T, sigma):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_hedge_33)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    return (norm.pdf(d1)/(St * sigma * np.sqrt(T))).round(4)
+
+
+def price_call_hedge_43(St, K_hedge_43, r, T, sigma):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_hedge_43)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    return ((St * norm.cdf(d1)) - (K_hedge_43 * np.exp(-r * T) * norm.cdf(d2))).round(4)
+
+def delta_call_hedge_43(St, K_hedge_43, r, T, sigma):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_hedge_43)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    return (norm.cdf(d1)).round(4)
+    
+def gamma_call_hedge_43(St, K_hedge_43, r, T, sigma):
+    d1= (1/(sigma * np.sqrt(T))) * (math.log(St/K_hedge_43)+(r + 0.5 * sigma**2) * T)
+    d2= d1 - (sigma * np.sqrt(T))
+    return (norm.pdf(d1)/(St * sigma * np.sqrt(T))).round(4)
+
+price_call_hedge_1 = price_call_hedge_43(St, K_hedge_43, r, T, sigma)
+delta_call_hedge_1 = delta_call_hedge_43(St, K_hedge_43, r, T, sigma)
+gamma_call_hedge_1 = gamma_call_hedge_43(St, K_hedge_43, r, T, sigma)
+print("price call hedge: ", price_call_hedge_1)
+print("delta call hedge: ", delta_call_hedge_1)
+print("gamma call hedge: ", gamma_call_hedge_1)
+
+
+price_total_options = ((price_call_spread(St, K_call, r, T, sigma, epsilon)*h*-1) + (price_put_spread(St, K_put, r, T, sigma, epsilon)*h_pdi) + (price_put(St, K_put, r, T, sigma))).round(4)*10000
+delta_total_options = ((delta_call_spread(St, K_call, sigma, r, T, epsilon)*h*-1) + (delta_put_spread(St, K_put, sigma, r, T, epsilon)*h_pdi) + (delta_put(St, K_put, sigma, r, T))).round(4)*10000
+gamma_total_options = ((gamma_call_spread(St, K_call, sigma, r, T, epsilon)*h*-1) + (gamma_put_spread(St, K_put, sigma, r, T, epsilon)*h_pdi) + (gamma_put(St, K_put, sigma, r, T))).round(4)*10000
+print("price total options: ", price_total_options)
+print("delta total options: ", delta_total_options)
+print("gamma total options: ", gamma_total_options)
+
+calls_hedge = (gamma_total_options/-gamma_call_hedge_1).round(0)
+price_calls_hedge = (price_call_hedge_1 * calls_hedge *-1).round(2)
+gamma_hedged = (gamma_total_options + calls_hedge*gamma_call_hedge_1).round(0)
+delta_after_gamma_hedge = (delta_total_options + calls_hedge*delta_call_hedge_1).round(0)
+stocks_hedge = delta_after_gamma_hedge *-1
+delta_hedged = stocks_hedge + delta_after_gamma_hedge
+print("nombre de calls pour le hedge gamma: ", calls_hedge)
+print("prix des calls pour le hedge gamma: ", price_calls_hedge)
+print("position gamma résuiduelle: ", gamma_hedged)
+print("position delta après le hedge gamma: ", delta_after_gamma_hedge)
+print("nombre de stocks pour le hedge delta: ", stocks_hedge)
+print("position delta résuiduelle: ", delta_hedged)
+
+#########################################################################################################################################################################
+
+#scénario 1 (75%)
+nb_calls_hedge_43_array = [calls_hedge]
+nb_calls_hedge_33_array = [0]
+nb_stocks_hedge_array = [stocks_hedge]
+St_array = [St]
+pnl_global_array = [price_calls_hedge]
+cash_array =[price_calls_hedge]
+pnl_calls_hedge_array = [0]
+pnl_stocks_hedge_array = [0]
+pnl_product_array = [0]
+calls_hedge_43_m1 = calls_hedge
+calls_hedge_33_m1 = 0
+stocks_hedge_m1 = stocks_hedge
+St_m1 = St
+cum_cash = price_calls_hedge
+cum_pnl_sj = 0
+gamma_hedged_array = []
+delta_hedged_array = []
+
+for x in range(0,252):
+    T= 1-((x+1)/252)
+    St = df2.iloc[1,x]
+    if St >= 51.6: 
+        sigma = 0.212
+    if 51.6 > St >= 49.45: 
+        sigma = 0.215
+    if 49.45 > St >= 47.3: 
+        sigma = 0.218
+    if 47.3 > St >= 45.15: 
+        sigma = 0.223
+    if 45.15 > St >= 44.07: 
+        sigma = 0.225
+    if 44.07 > St >= 43: 
+        sigma = 0.221
+    if 43 > St >= 41.92: 
+        sigma = 0.209
+    if 41.92 > St >= 40.85: 
+        sigma = 0.207
+    if 40.85 > St >= 38.7: 
+        sigma = 0.214
+    if 38.7 > St >= 34.4: 
+        sigma = 0.224 
+    else: 
+        sigma = 0.236
+    
+    
+    price_call_hedge_33_v = price_call_hedge_33(St, K_hedge_33, r, T, sigma)
+    delta_call_hedge_33_v = delta_call_hedge_33(St, K_hedge_33, r, T, sigma)
+    gamma_call_hedge_33_v = gamma_call_hedge_33(St, K_hedge_33, r, T, sigma)
+    price_call_hedge_43_v = price_call_hedge_43(St, K_hedge_43, r, T, sigma)
+    delta_call_hedge_43_v = delta_call_hedge_43(St, K_hedge_43, r, T, sigma)
+    gamma_call_hedge_43_v = gamma_call_hedge_43(St, K_hedge_43, r, T, sigma)
+    price_total_options = ((price_call_spread(St, K_call, r, T, sigma, epsilon)*h*-1) + (price_put_spread(St, K_put, r, T, sigma, epsilon)*h_pdi) + (price_put(St, K_put, r, T, sigma))).round(4)*10000
+    delta_total_options = ((delta_call_spread(St, K_call, sigma, r, T, epsilon)*h*-1) + (delta_put_spread(St, K_put, sigma, r, T, epsilon)*h_pdi) + (delta_put(St, K_put, sigma, r, T))).round(4)*10000
+    gamma_total_options = ((gamma_call_spread(St, K_call, sigma, r, T, epsilon)*h*-1) + (gamma_put_spread(St, K_put, sigma, r, T, epsilon)*h_pdi) + (gamma_put(St, K_put, sigma, r, T))).round(4)*10000
+    
+    if St > 38:
+        new_calls_hedge_43 = ((gamma_total_options+(gamma_call_hedge_33_v*calls_hedge_33_m1)+(gamma_call_hedge_43_v*calls_hedge_43_m1))/-gamma_call_hedge_43_v).round(0)
+        new_calls_hedge_33 = 0
+    else: 
+        new_calls_hedge_43 = 0
+        new_calls_hedge_33 = ((gamma_total_options+(gamma_call_hedge_33_v*calls_hedge_33_m1)+(gamma_call_hedge_43_v*calls_hedge_43_m1))/-gamma_call_hedge_33_v).round(0)
+        
+    calls_hedge_33 = calls_hedge_33_m1 + new_calls_hedge_33
+    calls_hedge_43 = calls_hedge_43_m1 + new_calls_hedge_43
+    cum_cash+= ((price_call_hedge_33_v * new_calls_hedge_33)*-1) + ((price_call_hedge_43_v * new_calls_hedge_43)*-1)
+    
+    delta_after_gamma_hedge = (delta_total_options + calls_hedge_43*delta_call_hedge_43_v + calls_hedge_33*delta_call_hedge_33_v).round(0)
+    stocks_hedge = (delta_after_gamma_hedge *-1).round(0)
+    
+    cum_pnl_sj+= (stocks_hedge_m1*(St-St_m1)).round(0)
+    
+    gamma_hedged = (gamma_total_options + calls_hedge_43*gamma_call_hedge_43_v + calls_hedge_33*gamma_call_hedge_33_v).round(0)
+    delta_hedged = stocks_hedge + delta_after_gamma_hedge
+    
+    profit_n_loss = cum_cash + (calls_hedge_43_m1*(price_call_hedge_43(St,K_hedge_43, r, T, sigma))) + (calls_hedge_33_m1*(price_call_hedge_33(St,K_hedge_33, r, T, sigma))) + cum_pnl_sj + price_total_options 
+    
+    nb_calls_hedge_43_array.append((calls_hedge_43))
+    nb_calls_hedge_33_array.append((calls_hedge_33))
+    nb_stocks_hedge_array.append((stocks_hedge))
+    pnl_global_array.append((profit_n_loss).round(0))
+    cash_array.append((cum_cash).round(0))
+    pnl_calls_hedge_array.append(((calls_hedge_43_m1*(price_call_hedge_43(St,K_hedge_43, r, T, sigma))) + (calls_hedge_33_m1*(price_call_hedge_33(St,K_hedge_33, r, T, sigma)))).round(0))
+    pnl_stocks_hedge_array.append(cum_pnl_sj)
+    pnl_product_array.append((price_total_options).round(0))
+    St_array.append(St)
+    gamma_hedged_array.append(gamma_hedged)
+    delta_hedged_array.append(delta_hedged)
+    
+    calls_hedge_43_m1 = calls_hedge_43
+    calls_hedge_33_m1 = calls_hedge_33
+    stocks_hedge_m1 = stocks_hedge
+    St_m1 = St
+
+print("gamma hedged: ", gamma_hedged_array)
+print("delta hedged: ", delta_hedged_array)
+print("nb calls strike 43 pour le hedge: ", nb_calls_hedge_43_array)
+print("nb calls strike 33 pour le hedge: ", nb_calls_hedge_33_array)
+print("nb stocks pour le hedge: ",nb_stocks_hedge_array)
+print("prix du stock: ", St_array)
+print("PNL global: ", pnl_global_array) 
+print("cash: ", cash_array) 
+print("PNL des calls du hedge: ", pnl_calls_hedge_array) 
+print("PNL des stocks du hedge: ", pnl_stocks_hedge_array) 
+print("PNL du produit: ", pnl_product_array) 
+
+#del gamma_hedged_array[-10:-1]
+#del delta_hedged_array[-10:-1]
+#del nb_calls_hedge_43_array[-10:-1]
+#del nb_calls_hedge_33_array[-10:-1]
+#del nb_stocks_hedge_array[-20:-1]
+#del St_array[-20:-1]
+#del pnl_global_array[-20:-1]
+#del cash_array[-20:-1]
+#del pnl_calls_hedge_array[-20:-1]
+#del pnl_stocks_hedge_array[-20:-1]
+#del pnl_product_array[-20:-1]
+
+import matplotlib.pyplot as plt
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL du produit', color='white')
+plt.plot(St_array, pnl_product_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL du produit')
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL des stocks du hedge', color='white')
+plt.plot(St_array, pnl_stocks_hedge_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL des stocks du hedge')
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL des calls du hedge', color='white')
+plt.plot(St_array, pnl_calls_hedge_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL des calls du hedge')
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL du cash', color='white')
+plt.plot(St_array, cash_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL du cash')
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL global', color='white')
+plt.plot(St_array, pnl_global_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL global')
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('Nombre de stocks du hedge', color='white')
+plt.plot(St_array, nb_stocks_hedge_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('Nombre de stocks du hedge')
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('Nombre de calls strike 33 pour le hedge', color='white')
+plt.plot(St_array, nb_calls_hedge_33_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('Nombre de calls strike 33 pour le hedge')
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('Nombre de calls strike 43 pour le hedge', color='white')
+plt.plot(St_array, nb_calls_hedge_43_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('Nombre de calls strike 43 pour le hedge')
+plt.show()
+
+##############################################################################################################################################################
+
+#scénario 2 (25%)
+nb_calls_hedge_43_array = [calls_hedge]
+nb_calls_hedge_33_array = [0]
+nb_stocks_hedge_array = [stocks_hedge]
+St_array = [St]
+pnl_global_array = [price_calls_hedge]
+cash_array =[price_calls_hedge]
+pnl_calls_hedge_array = [0]
+pnl_stocks_hedge_array = [0]
+pnl_product_array = [0]
+calls_hedge_43_m1 = calls_hedge
+calls_hedge_33_m1 = 0
+stocks_hedge_m1 = stocks_hedge
+St_m1 = St
+cum_cash = price_calls_hedge
+cum_pnl_sj = 0
+gamma_hedged_array = []
+delta_hedged_array = []
+#################################################################################################################################################################################################################
+for x in range(0,252):
+    T= 1-((x+1)/252)
+    St = df2.iloc[2,x]
+    if St >= 51.6: 
+        sigma = 0.212
+    if 51.6 > St >= 49.45: 
+        sigma = 0.215
+    if 49.45 > St >= 47.3: 
+        sigma = 0.218
+    if 47.3 > St >= 45.15: 
+        sigma = 0.223
+    if 45.15 > St >= 44.07: 
+        sigma = 0.225
+    if 44.07 > St >= 43: 
+        sigma = 0.221
+    if 43 > St >= 41.92: 
+        sigma = 0.209
+    if 41.92 > St >= 40.85: 
+        sigma = 0.207
+    if 40.85 > St >= 38.7: 
+        sigma = 0.214
+    if 38.7 > St >= 34.4: 
+        sigma = 0.224 
+    else: 
+        sigma = 0.236
+    
+    
+    price_call_hedge_33_v = price_call_hedge_33(St, K_hedge_33, r, T, sigma)
+    delta_call_hedge_33_v = delta_call_hedge_33(St, K_hedge_33, r, T, sigma)
+    gamma_call_hedge_33_v = gamma_call_hedge_33(St, K_hedge_33, r, T, sigma)
+    price_call_hedge_43_v = price_call_hedge_43(St, K_hedge_43, r, T, sigma)
+    delta_call_hedge_43_v = delta_call_hedge_43(St, K_hedge_43, r, T, sigma)
+    gamma_call_hedge_43_v = gamma_call_hedge_43(St, K_hedge_43, r, T, sigma)
+    price_total_options = ((price_call_spread(St, K_call, r, T, sigma, epsilon)*h*-1) + (price_put_spread(St, K_put, r, T, sigma, epsilon)*h_pdi) + (price_put(St, K_put, r, T, sigma))).round(4)*10000
+    delta_total_options = ((delta_call_spread(St, K_call, sigma, r, T, epsilon)*h*-1) + (delta_put_spread(St, K_put, sigma, r, T, epsilon)*h_pdi) + (delta_put(St, K_put, sigma, r, T))).round(4)*10000
+    gamma_total_options = ((gamma_call_spread(St, K_call, sigma, r, T, epsilon)*h*-1) + (gamma_put_spread(St, K_put, sigma, r, T, epsilon)*h_pdi) + (gamma_put(St, K_put, sigma, r, T))).round(4)*10000
+    
+    if St > 38:
+        new_calls_hedge_43 = ((gamma_total_options+(gamma_call_hedge_33_v*calls_hedge_33_m1)+(gamma_call_hedge_43_v*calls_hedge_43_m1))/-gamma_call_hedge_43_v).round(0)
+        new_calls_hedge_33 = 0
+    else: 
+        new_calls_hedge_43 = 0
+        new_calls_hedge_33 = ((gamma_total_options+(gamma_call_hedge_33_v*calls_hedge_33_m1)+(gamma_call_hedge_43_v*calls_hedge_43_m1))/-gamma_call_hedge_33_v).round(0)
+        
+    calls_hedge_33 = calls_hedge_33_m1 + new_calls_hedge_33
+    calls_hedge_43 = calls_hedge_43_m1 + new_calls_hedge_43
+    cum_cash+= ((price_call_hedge_33_v * new_calls_hedge_33)*-1) + ((price_call_hedge_43_v * new_calls_hedge_43)*-1)
+    
+    delta_after_gamma_hedge = (delta_total_options + calls_hedge_43*delta_call_hedge_43_v + calls_hedge_33*delta_call_hedge_33_v).round(0)
+    stocks_hedge = (delta_after_gamma_hedge *-1).round(0)
+    
+    cum_pnl_sj+= (stocks_hedge_m1*(St-St_m1)).round(0)
+    
+    gamma_hedged = (gamma_total_options + calls_hedge_43*gamma_call_hedge_43_v + calls_hedge_33*gamma_call_hedge_33_v).round(0)
+    delta_hedged = stocks_hedge + delta_after_gamma_hedge
+    
+    profit_n_loss = cum_cash + (calls_hedge_43_m1*(price_call_hedge_43(St,K_hedge_43, r, T, sigma))) + (calls_hedge_33_m1*(price_call_hedge_33(St,K_hedge_33, r, T, sigma))) + cum_pnl_sj + price_total_options 
+    
+    nb_calls_hedge_43_array.append((calls_hedge_43))
+    nb_calls_hedge_33_array.append((calls_hedge_33))
+    nb_stocks_hedge_array.append((stocks_hedge))
+    pnl_global_array.append((profit_n_loss).round(0))
+    cash_array.append((cum_cash).round(0))
+    pnl_calls_hedge_array.append(((calls_hedge_43_m1*(price_call_hedge_43(St,K_hedge_43, r, T, sigma))) + (calls_hedge_33_m1*(price_call_hedge_33(St,K_hedge_33, r, T, sigma)))).round(0))
+    pnl_stocks_hedge_array.append(cum_pnl_sj)
+    pnl_product_array.append((price_total_options).round(0))
+    St_array.append(St)
+    gamma_hedged_array.append(gamma_hedged)
+    delta_hedged_array.append(delta_hedged)
+    
+    calls_hedge_43_m1 = calls_hedge_43
+    calls_hedge_33_m1 = calls_hedge_33
+    stocks_hedge_m1 = stocks_hedge
+    St_m1 = St
+
+print("gamma hedged: ", gamma_hedged_array)
+print("delta hedged: ", delta_hedged_array)
+print("nb calls strike 43 pour le hedge: ", nb_calls_hedge_43_array)
+print("nb calls strike 33 pour le hedge: ", nb_calls_hedge_33_array)
+print("nb stocks pour le hedge: ",nb_stocks_hedge_array)
+print("prix du stock: ", St_array)
+print("PNL global: ", pnl_global_array) 
+print("cash: ", cash_array) 
+print("PNL des calls du hedge: ", pnl_calls_hedge_array) 
+print("PNL des stocks du hedge: ", pnl_stocks_hedge_array) 
+print("PNL du produit: ", pnl_product_array) 
+
+#del gamma_hedged_array[-10:-1]
+#del delta_hedged_array[-10:-1]
+#del nb_calls_hedge_43_array[-10:-1]
+#del nb_calls_hedge_33_array[-10:-1]
+#del nb_stocks_hedge_array[-20:-1]
+#del St_array[-20:-1]
+#del pnl_global_array[-20:-1]
+#del cash_array[-20:-1]
+#del pnl_calls_hedge_array[-20:-1]
+#del pnl_stocks_hedge_array[-20:-1]
+#del pnl_product_array[-20:-1]
+
+import matplotlib.pyplot as plt
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL du produit', color='white')
+plt.plot(St_array, pnl_product_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL du produit')
+ax.invert_xaxis()
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL des stocks du hedge', color='white')
+plt.plot(St_array, pnl_stocks_hedge_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL des stocks du hedge')
+ax.invert_xaxis()
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL des calls du hedge', color='white')
+plt.plot(St_array, pnl_calls_hedge_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL des calls du hedge')
+ax.invert_xaxis()
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL du cash', color='white')
+plt.plot(St_array, cash_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL du cash')
+ax.invert_xaxis()
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL global', color='white')
+plt.plot(St_array, pnl_global_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL global')
+ax.invert_xaxis()
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('Nombre de stocks du hedge', color='white')
+plt.plot(St_array, nb_stocks_hedge_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('Nombre de stocks du hedge')
+ax.invert_xaxis()
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('Nombre de calls strike 33 pour le hedge', color='white')
+plt.plot(St_array, nb_calls_hedge_33_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('Nombre de calls strike 33 pour le hedge')
+ax.invert_xaxis()
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('Nombre de calls strike 43 pour le hedge', color='white')
+plt.plot(St_array, nb_calls_hedge_43_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('Nombre de calls strike 43 pour le hedge')
+ax.invert_xaxis()
+plt.show()
+
+#################################################################################################################################################################
+
+#scénario 3 (5%)
+nb_calls_hedge_43_array = [calls_hedge]
+nb_calls_hedge_33_array = [0]
+nb_stocks_hedge_array = [stocks_hedge]
+St_array = [St]
+pnl_global_array = [price_calls_hedge]
+cash_array =[price_calls_hedge]
+pnl_calls_hedge_array = [0]
+pnl_stocks_hedge_array = [0]
+pnl_product_array = [0]
+calls_hedge_43_m1 = calls_hedge
+calls_hedge_33_m1 = 0
+stocks_hedge_m1 = stocks_hedge
+St_m1 = St
+cum_cash = price_calls_hedge
+cum_pnl_sj = 0
+gamma_hedged_array = []
+delta_hedged_array = []
+
+for x in range(0,252):
+    T= 1-((x+1)/252)
+    St = df2.iloc[3,x]
+    if St >= 51.6: 
+        sigma = 0.212
+    if 51.6 > St >= 49.45: 
+        sigma = 0.215
+    if 49.45 > St >= 47.3: 
+        sigma = 0.218
+    if 47.3 > St >= 45.15: 
+        sigma = 0.223
+    if 45.15 > St >= 44.07: 
+        sigma = 0.225
+    if 44.07 > St >= 43: 
+        sigma = 0.221
+    if 43 > St >= 41.92: 
+        sigma = 0.209
+    if 41.92 > St >= 40.85: 
+        sigma = 0.207
+    if 40.85 > St >= 38.7: 
+        sigma = 0.214
+    if 38.7 > St >= 34.4: 
+        sigma = 0.224 
+    else: 
+        sigma = 0.236
+    
+    
+    price_call_hedge_33_v = price_call_hedge_33(St, K_hedge_33, r, T, sigma)
+    delta_call_hedge_33_v = delta_call_hedge_33(St, K_hedge_33, r, T, sigma)
+    gamma_call_hedge_33_v = gamma_call_hedge_33(St, K_hedge_33, r, T, sigma)
+    price_call_hedge_43_v = price_call_hedge_43(St, K_hedge_43, r, T, sigma)
+    delta_call_hedge_43_v = delta_call_hedge_43(St, K_hedge_43, r, T, sigma)
+    gamma_call_hedge_43_v = gamma_call_hedge_43(St, K_hedge_43, r, T, sigma)
+    price_total_options = ((price_call_spread(St, K_call, r, T, sigma, epsilon)*h*-1) + (price_put_spread(St, K_put, r, T, sigma, epsilon)*h_pdi) + (price_put(St, K_put, r, T, sigma))).round(4)*10000
+    delta_total_options = ((delta_call_spread(St, K_call, sigma, r, T, epsilon)*h*-1) + (delta_put_spread(St, K_put, sigma, r, T, epsilon)*h_pdi) + (delta_put(St, K_put, sigma, r, T))).round(4)*10000
+    gamma_total_options = ((gamma_call_spread(St, K_call, sigma, r, T, epsilon)*h*-1) + (gamma_put_spread(St, K_put, sigma, r, T, epsilon)*h_pdi) + (gamma_put(St, K_put, sigma, r, T))).round(4)*10000
+    
+    if St > 38:
+        new_calls_hedge_43 = ((gamma_total_options+(gamma_call_hedge_33_v*calls_hedge_33_m1)+(gamma_call_hedge_43_v*calls_hedge_43_m1))/-gamma_call_hedge_43_v).round(0)
+        new_calls_hedge_33 = 0
+    else: 
+        new_calls_hedge_43 = 0
+        new_calls_hedge_33 = ((gamma_total_options+(gamma_call_hedge_33_v*calls_hedge_33_m1)+(gamma_call_hedge_43_v*calls_hedge_43_m1))/-gamma_call_hedge_33_v).round(0)
+        
+    calls_hedge_33 = calls_hedge_33_m1 + new_calls_hedge_33
+    calls_hedge_43 = calls_hedge_43_m1 + new_calls_hedge_43
+    cum_cash+= ((price_call_hedge_33_v * new_calls_hedge_33)*-1) + ((price_call_hedge_43_v * new_calls_hedge_43)*-1)
+    
+    delta_after_gamma_hedge = (delta_total_options + calls_hedge_43*delta_call_hedge_43_v + calls_hedge_33*delta_call_hedge_33_v).round(0)
+    stocks_hedge = (delta_after_gamma_hedge *-1).round(0)
+    
+    cum_pnl_sj+= (stocks_hedge_m1*(St-St_m1)).round(0)
+    
+    gamma_hedged = (gamma_total_options + calls_hedge_43*gamma_call_hedge_43_v + calls_hedge_33*gamma_call_hedge_33_v).round(0)
+    delta_hedged = stocks_hedge + delta_after_gamma_hedge
+    
+    profit_n_loss = cum_cash + (calls_hedge_43_m1*(price_call_hedge_43(St,K_hedge_43, r, T, sigma))) + (calls_hedge_33_m1*(price_call_hedge_33(St,K_hedge_33, r, T, sigma))) + cum_pnl_sj + price_total_options 
+    
+    nb_calls_hedge_43_array.append((calls_hedge_43))
+    nb_calls_hedge_33_array.append((calls_hedge_33))
+    nb_stocks_hedge_array.append((stocks_hedge))
+    pnl_global_array.append((profit_n_loss).round(0))
+    cash_array.append((cum_cash).round(0))
+    pnl_calls_hedge_array.append(((calls_hedge_43_m1*(price_call_hedge_43(St,K_hedge_43, r, T, sigma))) + (calls_hedge_33_m1*(price_call_hedge_33(St,K_hedge_33, r, T, sigma)))).round(0))
+    pnl_stocks_hedge_array.append(cum_pnl_sj)
+    pnl_product_array.append((price_total_options).round(0))
+    St_array.append(St)
+    gamma_hedged_array.append(gamma_hedged)
+    delta_hedged_array.append(delta_hedged)
+    
+    calls_hedge_43_m1 = calls_hedge_43
+    calls_hedge_33_m1 = calls_hedge_33
+    stocks_hedge_m1 = stocks_hedge
+    St_m1 = St
+
+print("gamma hedged: ", gamma_hedged_array)
+print("delta hedged: ", delta_hedged_array)
+print("nb calls strike 43 pour le hedge: ", nb_calls_hedge_43_array)
+print("nb calls strike 33 pour le hedge: ", nb_calls_hedge_33_array)
+print("nb stocks pour le hedge: ",nb_stocks_hedge_array)
+print("prix du stock: ", St_array)
+print("PNL global: ", pnl_global_array) 
+print("cash: ", cash_array) 
+print("PNL des calls du hedge: ", pnl_calls_hedge_array) 
+print("PNL des stocks du hedge: ", pnl_stocks_hedge_array) 
+print("PNL du produit: ", pnl_product_array) 
+
+#del gamma_hedged_array[-10:-1]
+#del delta_hedged_array[-10:-1]
+#del nb_calls_hedge_43_array[-10:-1]
+#del nb_calls_hedge_33_array[-10:-1]
+#del nb_stocks_hedge_array[-20:-1]
+#del St_array[-20:-1]
+#del pnl_global_array[-20:-1]
+#del cash_array[-20:-1]
+#del pnl_calls_hedge_array[-20:-1]
+#del pnl_stocks_hedge_array[-20:-1]
+#del pnl_product_array[-20:-1]
+
+import matplotlib.pyplot as plt
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL du produit', color='white')
+plt.plot(St_array, pnl_product_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL du produit')
+ax.invert_xaxis()
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL des stocks du hedge', color='white')
+plt.plot(St_array, pnl_stocks_hedge_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL des stocks du hedge')
+ax.invert_xaxis()
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL des calls du hedge', color='white')
+plt.plot(St_array, pnl_calls_hedge_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL des calls du hedge')
+ax.invert_xaxis()
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL du cash', color='white')
+plt.plot(St_array, cash_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL du cash')
+ax.invert_xaxis()
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('PNL global', color='white')
+plt.plot(St_array, pnl_global_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('PNL global')
+ax.invert_xaxis()
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('Nombre de stocks du hedge', color='white')
+plt.plot(St_array, nb_stocks_hedge_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('Nombre de stocks du hedge')
+ax.invert_xaxis()
+plt.show()
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('Nombre de calls strike 43 pour le hedge', color='white')
+plt.plot(St_array, nb_calls_hedge_43_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('Nombre de calls strike 43 pour le hedge')
+ax.invert_xaxis()
+plt.show()
+
+del nb_calls_hedge_33_array[-30:-1]
+del St_array[-30:-1]
+
+fig = plt.figure(figsize=(10, 5))
+ax = fig.add_subplot(111)
+ax.set_xlabel('X-axis ')
+ax.set_ylabel('Y-axis ')
+ax.xaxis.label.set_color('white')        
+ax.yaxis.label.set_color('white')  
+ax.tick_params(axis='x', colors='white')   
+ax.tick_params(axis='y', colors='white')   
+ax.set_title('Nombre de calls strike 33 pour le hedge', color='white')
+plt.plot(St_array, nb_calls_hedge_33_array, 'r', linewidth=4)
+plt.grid(True)
+plt.xlabel('Stock price')
+plt.ylabel('Nombre de calls strike 33 pour le hedge')
+ax.invert_xaxis()
+plt.show()
